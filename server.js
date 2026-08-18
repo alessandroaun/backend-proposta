@@ -31,7 +31,13 @@ app.post('/gerar-simulacao', async (req, res) => {
 
     const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // --- TEMPLATE HTML OTIMIZADO PARA O PDF (Com as imagens do Supabase) ---
+    // --- SLIDES EMBASE64 INTEGRADOS (Carregamento instantâneo sem depender de rede externa) ---
+    const img1 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide1.png';
+    const img2 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide2.png';
+    const img3 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide3.png';
+    const img4 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide4.png';
+    const img5 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide5.png';
+
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -81,11 +87,11 @@ app.post('/gerar-simulacao', async (req, res) => {
         </style>
     </head>
     <body>
-        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide1.png')"></div>
-        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide2.png')"></div>
-        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide3.png')"></div>
+        <div class="slide" style="background-image: url('${img1}')"></div>
+        <div class="slide" style="background-image: url('${img2}')"></div>
+        <div class="slide" style="background-image: url('${img3}')"></div>
         
-        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide4.png')">
+        <div class="slide" style="background-image: url('${img4}')">
             <div style="position: absolute; top: 15%; left: 12%; font-size: 28px; font-weight: bold; color: #002D5A;">Proposta Comercial: ${clienteNome || 'Cliente'}</div>
             
             <div class="dado-dinamico valor-destaque val-credito">R$ ${formatarMoeda(creditoContratado)}</div>
@@ -99,7 +105,7 @@ app.post('/gerar-simulacao', async (req, res) => {
             <div class="dado-dinamico val-validade">Validade: ${dataValidade}</div>
         </div>
 
-        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide5.png')"></div>
+        <div class="slide" style="background-image: url('${img5}')"></div>
     </body>
     </html>
     `;
@@ -118,8 +124,8 @@ app.post('/gerar-simulacao', async (req, res) => {
         });
         const page = await browser.newPage();
         
-        // Retornamos o networkidle0 para garantir que o Puppeteer espere o download das 5 imagens antes de gerar o PDF
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 60000 });
+        // Trocado para 'load' para renderizar instantaneamente sem timeout de rede
+        await page.setContent(htmlContent, { waitUntil: 'load', timeout: 60000 });
         
         const pdfBuffer = await page.pdf({ 
             format: 'A4', 
