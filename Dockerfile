@@ -1,29 +1,24 @@
-FROM node:18-alpine
+FROM node:18-slim
 
-# Instala o Chromium e as bibliotecas gráficas do Linux necessárias para o Puppeteer rodar
-RUN apk add --no-cache \
-  chromium \
-  nss \
-  freetype \
-  freetype-dev \
-  harfbuzz \
-  ca-certificates \
-  ttf-freefont
+# Instala as dependências de sistema necessárias para o Chrome rodar no Linux
+RUN apt-get update \
+    && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copia os arquivos de dependência
 COPY package*.json ./
 
-# Configurações obrigatórias: Diz ao Puppeteer para usar o Chrome do sistema 
-# e pular o download automático (que é o que está causando o seu erro)
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-# Instala as dependências (agora com o CORS já incluído)
+# Instala as dependências do Node (agora o Puppeteer VAI baixar o Chrome dele)
 RUN npm install
 
-# Copia o resto do código (seu server.js, imagens, etc)
+# Copia o resto do código
 COPY . .
 
 EXPOSE 10000

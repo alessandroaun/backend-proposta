@@ -106,7 +106,13 @@ app.post('/gerar-simulacao', async (req, res) => {
 
     try {
         const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            executablePath: '/usr/bin/google-chrome-stable',
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
         });
         const page = await browser.newPage();
         
