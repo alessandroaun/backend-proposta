@@ -1,9 +1,8 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
-const cors = require('cors'); // <-- 1. Importação do CORS
+const cors = require('cors');
 const app = express();
 
-// <-- 2. Libera o backend para receber requisições de qualquer origem (inclusive seu localhost)
 app.use(cors()); 
 app.use(express.json());
 
@@ -32,18 +31,16 @@ app.post('/gerar-simulacao', async (req, res) => {
 
     const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // --- TEMPLATE HTML PARA O PDF ---
+    // --- TEMPLATE HTML OTIMIZADO PARA O PDF (Sem requisições externas travadas) ---
     const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap');
-            
             body, html { 
                 margin: 0; padding: 0; 
-                font-family: 'DM Sans', sans-serif; 
+                font-family: Helvetica, Arial, sans-serif; 
                 background-color: #fff;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
@@ -60,16 +57,17 @@ app.post('/gerar-simulacao', async (req, res) => {
                 background-size: 100% 100%;
                 background-repeat: no-repeat;
                 background-position: center;
+                background-color: #f3f0df;
             }
             
             .dado-dinamico {
                 position: absolute;
-                font-family: 'DM Sans', sans-serif;
+                font-family: Helvetica, Arial, sans-serif;
                 font-size: 24px;
                 color: #002D5A;
             }
 
-            .valor-destaque { font-weight: 700; font-size: 34px; }
+            .valor-destaque { font-weight: bold; font-size: 34px; }
 
             .val-credito { top: 38%; left: 12%; }
             .val-parcela-integral { top: 58%; left: 12%; color: #11caa0; }
@@ -83,40 +81,45 @@ app.post('/gerar-simulacao', async (req, res) => {
         </style>
     </head>
     <body>
-        <div class="slide" style="background-image: url('img_slide1.jpg')"></div>
-        <div class="slide" style="background-image: url('img_slide2.jpg')"></div>
-        <div class="slide" style="background-image: url('img_slide3.jpg')"></div>
+        <div class="slide"></div>
+        <div class="slide"></div>
+        <div class="slide"></div>
         
-        <div class="slide" style="background-image: url('img_slide4.png')">
-            <div class="dado-dinamico valor-destaque val-credito">${formatarMoeda(creditoContratado)}</div>
-            <div class="dado-dinamico valor-destaque val-parcela-integral">${formatarMoeda(parcelaIntegral)}</div>
+        <div class="slide">
+            <div style="position: absolute; top: 15%; left: 12%; font-size: 28px; font-weight: bold; color: #002D5A;">Proposta Comercial: ${clienteNome || 'Cliente'}</div>
+            
+            <div class="dado-dinamico valor-destaque val-credito">R$ ${formatarMoeda(creditoContratado)}</div>
+            <div class="dado-dinamico valor-destaque val-parcela-integral">R$ ${formatarMoeda(parcelaIntegral)}</div>
             <div class="dado-dinamico valor-destaque val-prazo">${prazo} meses</div>
             
             <div class="dado-dinamico val-lance-embutido">Aproximadamente<br><span style="font-size:30px; font-weight: bold;">R$ ${formatarMoeda(valorLanceEmbutido)}</span></div>
-            <div class="dado-dinamico valor-destaque val-credito-liberado">${formatarMoeda(creditoLiberado)}</div>
-            <div class="dado-dinamico valor-destaque val-parcela-pos">${formatarMoeda(parcelaPosContemplacao)}</div>
+            <div class="dado-dinamico valor-destaque val-credito-liberado">R$ ${formatarMoeda(creditoLiberado)}</div>
+            <div class="dado-dinamico valor-destaque val-parcela-pos">R$ ${formatarMoeda(parcelaPosContemplacao)}</div>
             
-            <div class="dado-dinamico val-validade">${dataValidade}</div>
+            <div class="dado-dinamico val-validade">Validade: ${dataValidade}</div>
         </div>
 
-        <div class="slide" style="background-image: url('img_slide5.jpg')"></div>
+        <div class="slide"></div>
     </body>
     </html>
     `;
 
+    let browser = null;
     try {
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
             executablePath: '/usr/bin/google-chrome-stable',
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--headless=new'
             ]
         });
         const page = await browser.newPage();
         
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        // Timeout estendido para 60 segundos e modo de carregamento leve
+        await page.setContent(htmlContent, { waitUntil: 'load', timeout: 60000 });
         
         const pdfBuffer = await page.pdf({ 
             format: 'A4', 
@@ -129,10 +132,11 @@ app.post('/gerar-simulacao', async (req, res) => {
         res.contentType("application/pdf");
         res.send(pdfBuffer);
     } catch (e) {
-        console.error(e);
+        if (browser) await browser.close();
+        console.error("Erro detalhado no Puppeteer:", e);
         res.status(500).send("Erro ao gerar PDF: " + e.message);
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
