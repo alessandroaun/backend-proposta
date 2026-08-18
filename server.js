@@ -31,7 +31,6 @@ app.post('/gerar-simulacao', async (req, res) => {
 
     const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // --- SLIDES EMBASE64 INTEGRADOS (Carregamento instantâneo sem depender de rede externa) ---
     const img1 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide1.png';
     const img2 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide2.png';
     const img3 = 'https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide3.png';
@@ -44,15 +43,22 @@ app.post('/gerar-simulacao', async (req, res) => {
     <head>
         <meta charset="UTF-8">
         <style>
+            * { box-sizing: border-box; }
             body, html { 
-                margin: 0; padding: 0; 
+                margin: 0; 
+                padding: 0; 
+                width: 297mm;
+                height: 210mm;
                 font-family: Helvetica, Arial, sans-serif; 
                 background-color: #fff;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
             }
             
-            @page { size: A4 landscape; margin: 0; }
+            @page { 
+                size: 297mm 210mm; 
+                margin: 0; 
+            }
             
             .slide { 
                 width: 297mm; 
@@ -60,30 +66,32 @@ app.post('/gerar-simulacao', async (req, res) => {
                 position: relative; 
                 overflow: hidden; 
                 page-break-after: always;
+                page-break-inside: avoid;
                 background-size: 100% 100%;
                 background-repeat: no-repeat;
                 background-position: center;
-                background-color: #f3f0df;
             }
             
             .dado-dinamico {
                 position: absolute;
                 font-family: Helvetica, Arial, sans-serif;
-                font-size: 24px;
+                font-size: 18px;
                 color: #002D5A;
             }
 
-            .valor-destaque { font-weight: bold; font-size: 34px; }
+            .valor-destaque { font-weight: bold; font-size: 22px; }
 
-            .val-credito { top: 38%; left: 12%; }
-            .val-parcela-integral { top: 58%; left: 12%; color: #11caa0; }
-            .val-prazo { top: 78%; left: 12%; }
+            /* Ajustes finos de posicionamento baseados no modelo do slide 4 */
+            .val-cliente { top: 12%; left: 10%; font-size: 22px; font-weight: bold; color: #002D5A; }
+            .val-credito { top: 32%; left: 10%; }
+            .val-parcela-integral { top: 45%; left: 10%; color: #00a884; }
+            .val-prazo { top: 58%; left: 10%; }
 
-            .val-lance-embutido { top: 38%; left: 55%; font-size: 20px;}
-            .val-credito-liberado { top: 58%; left: 55%; }
-            .val-parcela-pos { top: 78%; left: 55%; color: #11caa0; }
+            .val-lance-embutido { top: 32%; left: 52%; font-size: 16px; }
+            .val-credito-liberado { top: 45%; left: 52%; }
+            .val-parcela-pos { top: 58%; left: 52%; color: #00a884; }
 
-            .val-validade { top: 88%; left: 75%; font-size: 16px; color: #666; font-weight: bold; }
+            .val-validade { top: 85%; left: 72%; font-size: 14px; color: #444; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -92,13 +100,13 @@ app.post('/gerar-simulacao', async (req, res) => {
         <div class="slide" style="background-image: url('${img3}')"></div>
         
         <div class="slide" style="background-image: url('${img4}')">
-            <div style="position: absolute; top: 15%; left: 12%; font-size: 28px; font-weight: bold; color: #002D5A;">Proposta Comercial: ${clienteNome || 'Cliente'}</div>
+            <div class="dado-dinamico val-cliente">Proposta Comercial: ${clienteNome || 'Cliente'}</div>
             
             <div class="dado-dinamico valor-destaque val-credito">R$ ${formatarMoeda(creditoContratado)}</div>
             <div class="dado-dinamico valor-destaque val-parcela-integral">R$ ${formatarMoeda(parcelaIntegral)}</div>
             <div class="dado-dinamico valor-destaque val-prazo">${prazo} meses</div>
             
-            <div class="dado-dinamico val-lance-embutido">Aproximadamente<br><span style="font-size:30px; font-weight: bold;">R$ ${formatarMoeda(valorLanceEmbutido)}</span></div>
+            <div class="dado-dinamico val-lance-embutido">Aproximadamente<br><span style="font-size: 20px; font-weight: bold;">R$ ${formatarMoeda(valorLanceEmbutido)}</span></div>
             <div class="dado-dinamico valor-destaque val-credito-liberado">R$ ${formatarMoeda(creditoLiberado)}</div>
             <div class="dado-dinamico valor-destaque val-parcela-pos">R$ ${formatarMoeda(parcelaPosContemplacao)}</div>
             
@@ -124,13 +132,13 @@ app.post('/gerar-simulacao', async (req, res) => {
         });
         const page = await browser.newPage();
         
-        // Trocado para 'load' para renderizar instantaneamente sem timeout de rede
         await page.setContent(htmlContent, { waitUntil: 'load', timeout: 60000 });
         
         const pdfBuffer = await page.pdf({ 
-            format: 'A4', 
-            landscape: true, 
-            printBackground: true 
+            width: '297mm',
+            height: '210mm',
+            printBackground: true,
+            preferCSSPageSize: true
         });
         
         await browser.close();
