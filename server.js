@@ -31,7 +31,7 @@ app.post('/gerar-simulacao', async (req, res) => {
 
     const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    // --- TEMPLATE HTML OTIMIZADO PARA O PDF (Sem requisições externas travadas) ---
+    // --- TEMPLATE HTML OTIMIZADO PARA O PDF (Com as imagens do Supabase) ---
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -81,11 +81,11 @@ app.post('/gerar-simulacao', async (req, res) => {
         </style>
     </head>
     <body>
-        <div class="slide"></div>
-        <div class="slide"></div>
-        <div class="slide"></div>
+        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide1.png')"></div>
+        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide2.png')"></div>
+        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide3.png')"></div>
         
-        <div class="slide">
+        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide4.png')">
             <div style="position: absolute; top: 15%; left: 12%; font-size: 28px; font-weight: bold; color: #002D5A;">Proposta Comercial: ${clienteNome || 'Cliente'}</div>
             
             <div class="dado-dinamico valor-destaque val-credito">R$ ${formatarMoeda(creditoContratado)}</div>
@@ -99,7 +99,7 @@ app.post('/gerar-simulacao', async (req, res) => {
             <div class="dado-dinamico val-validade">Validade: ${dataValidade}</div>
         </div>
 
-        <div class="slide"></div>
+        <div class="slide" style="background-image: url('https://omgkvkooitmdqulasdmx.supabase.co/storage/v1/object/public/images/img_slide5.png')"></div>
     </body>
     </html>
     `;
@@ -118,8 +118,8 @@ app.post('/gerar-simulacao', async (req, res) => {
         });
         const page = await browser.newPage();
         
-        // Timeout estendido para 60 segundos e modo de carregamento leve
-        await page.setContent(htmlContent, { waitUntil: 'load', timeout: 60000 });
+        // Retornamos o networkidle0 para garantir que o Puppeteer espere o download das 5 imagens antes de gerar o PDF
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 60000 });
         
         const pdfBuffer = await page.pdf({ 
             format: 'A4', 
