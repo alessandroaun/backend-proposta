@@ -274,8 +274,23 @@ app.post('/gerar-simulacao', async (req, res) => {
         });
         const page = await browser.newPage();
         
+        // Carrega o conteúdo HTML
         await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await new Promise(r => setTimeout(r, 2000));
+        
+        // Garante via script no navegador do Puppeteer que TODAS as imagens (backgrounds e tags img) terminaram de baixar
+        await page.evaluate(async () => {
+            const selectors = Array.from(document.querySelectorAll('img'));
+            await Promise.all(selectors.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continua mesmo se houver falha pontual em alguma imagem
+                });
+            }));
+        });
+
+        // Pequena pausa de segurança adicional para renderização de buffer do motor Chromium
+        await new Promise(r => setTimeout(r, 1000));
         
         const pdfBuffer = await page.pdf({ 
             width: '1280px',
