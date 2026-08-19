@@ -222,7 +222,11 @@ app.post('/gerar-simulacao', async (req, res) => {
         });
         const page = await browser.newPage();
         
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 60000 });
+        // Carrega o conteúdo de forma rápida aguardando apenas o DOM carregar
+        await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        
+        // Dá um respiro de 2 segundos para garantir que as imagens externas renderizaram no buffer
+        await new Promise(r => setTimeout(r, 2000));
         
         const pdfBuffer = await page.pdf({ 
             width: '1280px',
