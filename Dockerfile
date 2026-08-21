@@ -1,21 +1,21 @@
 FROM node:18-slim
 
-# Instala as dependências de sistema necessárias para o Chrome rodar no Linux
+# Instala o Chromium nativo do sistema e fontes (evita o erro do apt-key e downloads externos)
 RUN apt-get update \
-    && apt-get install -y wget gnupg \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    && apt-get install -y chromium fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf \
       --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
+
+# Pula o download do navegador pelo NPM e aponta direto para o Chromium instalado acima
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
 # Copia os arquivos de dependência
 COPY package*.json ./
 
-# Instala as dependências do Node (agora o Puppeteer VAI baixar o Chrome dele)
+# Instala as dependências do Node
 RUN npm install
 
 # Copia o resto do código
